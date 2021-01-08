@@ -57,7 +57,7 @@
 	bfOffBits(buf_id)	=	lpeek(buf(buf_id),10)
 	biSize(buf_id)		=	lpeek(buf(buf_id),14)
 
-	if biSize=40{
+	if biSize(buf_id)=40{
 		biWidth(buf_id)			=	lpeek(buf(buf_id),18)
 		biHeight(buf_id)		=	lpeek(buf(buf_id),22)
 		biPlanes(buf_id)		=	wpeek(buf(buf_id),26)
@@ -69,7 +69,7 @@
 		biClrUsed(buf_id)		=	lpeek(buf(buf_id),46)
 		biCirImportant(buf_id)	=	lpeek(buf(buf_id),50)
 	}else{
-		if biSize=12{
+		if biSize(buf_id)=12{
 			biWidth(buf_id)		=	wpeek(buf(buf_id),18)
 			biHeight(buf_id)	=	wpeek(buf(buf_id),20)
 			biPlanes(buf_id)	=	wpeek(buf(buf_id),22)
