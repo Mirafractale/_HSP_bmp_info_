@@ -1,0 +1,168 @@
+#module "bmpInfo"
+//bufferに読み込まずにbloadでbmpファイルの情報やら色を取得するモジュールです。
+//何かあってもこのモジュールの著者は一切の責任を負いません。
+//改変、二次配布は無償に限り自由です。著者への連絡は不要です。
+//HSP3Dish(HSP3.5)NDKでも動作するようにしています。というかこれが本命
+
+#deffunc bmpInfo_init
+	//bmpInfo_init
+	//モジュール初期化命令　必ず初めに実行してください
+
+	buf_num = 512	//バッファの個数:512 必要に応じて増やしてください
+	sdim buf,8,buf_num 
+
+	dim bfSize,buf_num
+	dim bfOffBits,buf_num
+	dim biSize,buf_num
+	dim biWidth,buf_num
+	dim biHeight,buf_num
+	dim biPlanes,buf_num
+	dim biBitCount,buf_num
+	dim biCompression,buf_num
+	dim biSizeImage,buf_num
+	dim biXPixPerMeter,buf_num
+	dim biYPixPerMeter,buf_num
+	dim biClrUsed,buf_num
+	dim biCirImportant,buf_num
+	
+	return
+
+
+#deffunc loadBi int buf_id , str file
+	//loadBi バッファ番号 , ファイル名
+	//バッファ番号にビットマップ形式のファイルを読み込みます。
+	
+	/*
+	dirlist p1,file,1
+	if stat=0 {
+		dialog "ファイルが存在しません:"+file
+		return
+	}
+	*///PCで使う場合などは此処のコメントアウトを外すことでファイルがない場合のエラーを阻止できます。
+		//NDK版の場合仕様上assetsフォルダ内のファイルの有無が確認できません。
+		
+	bload file,buf(buf_id)
+
+	byType=wpeek(buf(buf_id),0)
+	if byType!=19778 {
+		dialog "ビットマップ形式のファイルではありません"
+		return
+	}
+
+	bfSize(buf_id)	=	lpeek(buf(buf_id),2)
+
+	memexpand buf(buf_id),bfSize(buf_id)//ファイルサイズを踏まえてメモリ再確保
+	bload file,buf(buf_id)
+	
+	bfOffBits(buf_id)	=	lpeek(buf(buf_id),10)
+	biSize(buf_id)		=	lpeek(buf(buf_id),14)
+
+	if biSize=40{
+		biWidth(buf_id)			=	lpeek(buf(buf_id),18)
+		biHeight(buf_id)		=	lpeek(buf(buf_id),22)
+		biPlanes(buf_id)		=	wpeek(buf(buf_id),26)
+		biBitCount(buf_id)		=	wpeek(buf(buf_id),28)
+		biCompression(buf_id)	=	lpeek(buf(buf_id),30)
+		biSizeImage(buf_id)		=	lpeek(buf(buf_id),34)
+		biXPixPerMeter(buf_id)	=	lpeek(buf(buf_id),38)
+		biYPixPerMeter(buf_id)	=	lpeek(buf(buf_id),42)
+		biClrUsed(buf_id)		=	lpeek(buf(buf_id),46)
+		biCirImportant(buf_id)	=	lpeek(buf(buf_id),50)
+	}else{
+		if biSize=12{
+			biWidth(buf_id)		=	wpeek(buf(buf_id),18)
+			biHeight(buf_id)	=	wpeek(buf(buf_id),20)
+			biPlanes(buf_id)	=	wpeek(buf(buf_id),22)
+			biBitCount(buf_id)	=	wpeek(buf(buf_id),24)
+		}else{
+			dialog "情報ヘッダサイズが非対応です。"
+			return
+		}
+	}
+	return
+
+
+#defcfunc biInfo int buf_id , int type
+	//biInfo( バッファ番号 , 情報の種類 )
+	//バッファ番号の画像の情報を返します。
+	
+	if type=0{
+		return bfSize(buf_id)
+	}
+	if type=1{
+		return bfOffBits(buf_id)
+	}
+	if type=2{
+		return biSize(buf_id)
+	}
+	if type=3{
+		return biWidth(buf_id)
+	}
+	if type=4{
+		return biHeight(buf_id)
+	}
+	if type=5{
+		return biPlanes(buf_id)
+	}
+	if type=6{
+		return biBitCount(buf_id)
+	}
+	if type=7{
+		return biCompression(buf_id)
+	}
+	if type=8{
+		return biSizeImage(buf_id)
+	}
+	if type=9{
+		return biXPixPerMeter(buf_id)
+	}
+	if type=10{
+		return biYPixPerMeter(buf_id)
+	}
+	if type=11{
+		return biClrUsed(buf_id)
+	}
+	if type=12{
+		return biCirImportant(buf_id)
+	}
+	return
+
+
+#deffunc biPget int buf_id , int x , int y
+	//biInfo バッファ番号 , x座標 , y座標
+	//バッファ番号の画像の指定された座標の色を現在の色に指定しますを。
+	//pget命令と同じ感じ
+	//圧縮 カラーパレット非対応
+	//24bitカラー専用
+	//守らないとエラー
+	
+	px	=	x
+	py	=	biHeight(buf_id)-y-1
+	
+	cb	= 	peek(buf(buf_id),bfOffBits(buf_id)+3*(biWidth(buf_id)*py+px)-0)//b
+	cg	= 	peek(buf(buf_id),bfOffBits(buf_id)+3*(biWidth(buf_id)*py+px)-1)//g
+	cr	= 	peek(buf(buf_id),bfOffBits(buf_id)+3*(biWidth(buf_id)*py+px)-2)//r
+	
+	color cr , cg , cb
+	
+	return
+
+
+#global
+
+#if 0//0以外で実行 サンプル
+bmpInfo_init
+
+dialog "bmp",16,"bmpファイル"
+if stat=0:end
+loadBi 0,refstr
+
+randomize
+repeat 13
+
+	biPget 0,rnd(biInfo(0,3)),rnd(biInfo(0,4))
+	mes str(cnt)+":"+biInfo(0,cnt)
+loop
+
+
+#endif
