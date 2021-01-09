@@ -7,10 +7,10 @@
 #deffunc bmpInfo_init
 	//bmpInfo_init
 	//モジュール初期化命令　必ず初めに実行してください
-
+	
 	buf_num = 512	//バッファの個数:512 必要に応じて増やしてください
 	sdim buf,8,buf_num 
-
+	
 	dim bfSize,buf_num
 	dim bfOffBits,buf_num
 	dim biSize,buf_num
@@ -42,21 +42,21 @@
 		//NDK版の場合仕様上assetsフォルダ内のファイルの有無が確認できません。
 		
 	bload file,buf(buf_id)
-
+	
 	byType=wpeek(buf(buf_id),0)
 	if byType!=19778 {
 		dialog "ビットマップ形式のファイルではありません"
 		return
 	}
-
+	
 	bfSize(buf_id)	=	lpeek(buf(buf_id),2)
-
+	
 	memexpand buf(buf_id),bfSize(buf_id)//ファイルサイズを踏まえてメモリ再確保
 	bload file,buf(buf_id)
 	
 	bfOffBits(buf_id)	=	lpeek(buf(buf_id),10)
 	biSize(buf_id)		=	lpeek(buf(buf_id),14)
-
+	
 	if biSize(buf_id)=40{
 		biWidth(buf_id)			=	lpeek(buf(buf_id),18)
 		biHeight(buf_id)		=	lpeek(buf(buf_id),22)
@@ -135,13 +135,25 @@
 	//圧縮 カラーパレット非対応
 	//24bitカラー専用
 	//守らないとエラー
+
+	if biBitCount(buf_id)!=24{
+		dialog "24bitカラー以外は使用できません。"
+		return
+	}
 	
-	px	=	x
-	py	=	biHeight(buf_id)-y-1
+	px	=	biWidth(buf_id)-x-1
+	py	=	y
 	
-	cb	= 	peek(buf(buf_id),bfOffBits(buf_id)+3*(biWidth(buf_id)*py+px)-0)//b
-	cg	= 	peek(buf(buf_id),bfOffBits(buf_id)+3*(biWidth(buf_id)*py+px)-1)//g
-	cr	= 	peek(buf(buf_id),bfOffBits(buf_id)+3*(biWidth(buf_id)*py+px)-2)//r
+	if px>=biWidth(buf_id){
+		px=biWidth(buf_id)-1
+	}
+	if py>=biHeight(buf_id){
+		py=biHeight(buf_id)-1
+	}
+	
+	cr	= 	peek(buf(buf_id),bfSize(buf_id)-3*(biWidth(buf_id)*py+px)-1)//r
+	cg	= 	peek(buf(buf_id),bfSize(buf_id)-3*(biWidth(buf_id)*py+px)-2)//g
+	cb	= 	peek(buf(buf_id),bfSize(buf_id)-3*(biWidth(buf_id)*py+px)-3)//b
 	
 	color cr , cg , cb
 	
@@ -164,5 +176,15 @@ repeat 13
 	mes str(cnt)+":"+biInfo(0,cnt)
 loop
 
+repeat biInfo(0,3)
+	i=cnt
+	repeat biInfo(0,4)
+		l=cnt
+		biPget 0,i,l
+		pset i,l
+	loop
+	await
+loop
 
 #endif
+
